@@ -6,10 +6,11 @@ import argparse
 import os
 import platform
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from contextlib import ExitStack
 from pathlib import Path
 
@@ -69,6 +70,13 @@ class AppState:
     fullscreen: bool = False
 
 
+@dataclass
+class Controls:
+    """Replaces the preview window keys when GokuCam runs without one (tray mode)."""
+    stop: threading.Event = field(default_factory=threading.Event)
+    recalibrate: threading.Event = field(default_factory=threading.Event)
+
+
 def positive_fps(value: str) -> float:
     fps = float(value)
     if not np.isfinite(fps) or not 1 <= fps <= 120:
@@ -110,6 +118,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--gesture-debug", action="store_true",
         help="Print gesture recognition details to the terminal (nothing is drawn on the video)",
+    )
+    parser.add_argument(
+        "--no-preview", action="store_true",
+        help="Do not open the preview window; the video only goes to the virtual camera (Ctrl+C quits)",
+    )
+    parser.add_argument(
+        "--tray", action="store_true",
+        help="Run from the system tray / menu bar instead of the preview window (implies --no-preview)",
     )
     parser.add_argument("--self-test", action="store_true", help=argparse.SUPPRESS)
     return parser.parse_args()
@@ -440,11 +456,21 @@ def run() -> int:
     args = parse_args()
     if getattr(args, "self_test", False):
         return self_test()
+    if args.tray:
+        args.no_preview = True
+        try:
+            from .tray import run_tray
+        except ImportError:
+            from tray import run_tray
+        return run_tray(args)
     with ExitStack() as resources:
         return run_camera(args, resources)
 
 
-def run_camera(args: argparse.Namespace, resources: ExitStack) -> int:
+def run_camera(args: argparse.Namespace, resources: ExitStack,
+               controls: Controls | None = None) -> int:
+    preview = not args.no_preview
+    controls = controls or Controls()
     download_models()
     capture = open_camera(args.camera, args.width, args.height)
     resources.callback(capture.release)
@@ -460,14 +486,15 @@ def run_camera(args: argparse.Namespace, resources: ExitStack) -> int:
     genki = GenkiDama()
     hair_mask: np.ndarray | None = None
     hair_mask_at = float("-inf")
-    resources.callback(cv2.destroyAllWindows)
-    cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
-    cv2.resizeWindow(WINDOW_NAME, args.width, args.height)
+    if preview:
+        resources.callback(cv2.destroyAllWindows)
+        cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
+        cv2.resizeWindow(WINDOW_NAME, args.width, args.height)
 
     state = AppState(
         calibration_started=time.perf_counter(), fullscreen=args.fullscreen
     )
-    if state.fullscreen:
+    if state.fullscreen and preview:
         set_fullscreen(True)
 
     background: np.ndarray | None = None
@@ -488,7 +515,8 @@ def run_camera(args: argparse.Namespace, resources: ExitStack) -> int:
     ready_at = float("-inf")
     came_back = True
     started = time.perf_counter()
-    print("[GokuCam] Window keys: SPACE new background, F fullscreen, Q quit.")
+    if preview:
+        print("[GokuCam] Window keys: SPACE new background, F fullscreen, Q quit.")
     if saved_background is None:
         ask_to_leave_frame()
 
@@ -666,12 +694,15 @@ def run_camera(args: argparse.Namespace, resources: ExitStack) -> int:
                 # The banner is drawn after flipping so its text reads correctly.
                 output = display if args.no_mirror else cv2.flip(display, 1)
                 send_virtual_frame(virtual_camera, draw_banner(output, banner) if banner else output)
-            cv2.imshow(WINDOW_NAME, draw_banner(display, banner) if banner else display)
+            key = 0
+            if preview:
+                cv2.imshow(WINDOW_NAME, draw_banner(display, banner) if banner else display)
+                key = cv2.waitKey(1) & 0xFF
 
-            key = cv2.waitKey(1) & 0xFF
-            if key in (ord("q"), 27):
+            if key in (ord("q"), 27) or controls.stop.is_set():
                 break
-            if key == ord(" "):
+            if key == ord(" ") or controls.recalibrate.is_set():
+                controls.recalibrate.clear()
                 state.phase = "calibrating"
                 state.calibration_started = now
                 state.vanish_started = None
@@ -686,7 +717,7 @@ def run_camera(args: argparse.Namespace, resources: ExitStack) -> int:
                 genki_trigger.reset()
                 genki.reset()
                 ask_to_leave_frame()
-            elif key == ord("f"):
+            elif key == ord("f") and preview:
                 state.fullscreen = not state.fullscreen
                 set_fullscreen(state.fullscreen)
             if virtual_camera is not None:

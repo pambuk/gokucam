@@ -18,7 +18,7 @@ if not exist "%VENV_PY%" (
   if errorlevel 1 goto :error
 )
 
-"%VENV_PY%" -c "import cv2, mediapipe, numpy, pyvirtualcam" >nul 2>nul
+"%VENV_PY%" -c "import cv2, mediapipe, numpy, pyvirtualcam, pystray" >nul 2>nul
 if errorlevel 1 (
   echo [GokuCam] Installing dependencies ^(internet needed only this time^)...
   "%VENV_PY%" -m pip install --upgrade pip

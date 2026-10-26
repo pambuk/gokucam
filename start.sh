@@ -24,7 +24,7 @@ if [ ! -x "$VENV_PY" ]; then
   "$PYTHON" -m venv "$VENV_DIR"
 fi
 
-if ! "$VENV_PY" -c "import cv2, mediapipe, numpy, pyvirtualcam" >/dev/null 2>&1; then
+if ! "$VENV_PY" -c "import cv2, mediapipe, numpy, pyvirtualcam, pystray" >/dev/null 2>&1; then
   echo "[GokuCam] Installing dependencies (internet needed only this time)..."
   "$VENV_PY" -m pip install --upgrade pip
   "$VENV_PY" -m pip install -r requirements.txt

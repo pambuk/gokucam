@@ -16,6 +16,7 @@ def arguments(**overrides):
         camera=0, width=960, height=540, fps=30.0, fullscreen=False,
         no_mirror=True, virtual_camera=None, virtual_backend=None, virtual_device=None,
         gesture_debug=False, blur_background=False, background_file=None,
+        no_preview=False, tray=False,
     )
     values.update(overrides)
     return argparse.Namespace(**values)
@@ -226,3 +227,33 @@ class BlurBackgroundTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class HeadlessTests(unittest.TestCase):
+    def test_no_preview_opens_no_window_and_follows_the_controls(self):
+        controls = app.Controls()
+        controls.recalibrate.set()
+        reads = iter(range(4))
+
+        def read():
+            if next(reads, None) is None:
+                controls.stop.set()
+            return True, np.full((24, 40, 3), 10, np.uint8)
+
+        capture = Mock(read=read)
+        with ExitStack() as mocks:
+            mocks.enter_context(patch.object(app, "download_models"))
+            mocks.enter_context(patch.object(app, "open_camera", return_value=capture))
+            mocks.enter_context(patch.object(app, "create_tasks", return_value=(Mock(), Mock())))
+            mocks.enter_context(patch.object(app, "open_virtual_camera", return_value=None))
+            mocks.enter_context(patch.object(app, "person_fraction", return_value=0.0))
+            asked = mocks.enter_context(patch.object(app, "ask_to_leave_frame"))
+            for name in ("namedWindow", "resizeWindow", "destroyAllWindows", "imshow", "waitKey"):
+                mocks.enter_context(patch.object(app.cv2, name, side_effect=AssertionError(f"{name} opens a window")))
+            mocks.enter_context(patch("builtins.print"))
+            with ExitStack() as resources:
+                self.assertEqual(app.run_camera(arguments(no_preview=True), resources, controls), 0)
+        capture.release.assert_called_once()
+        # Once at start (no saved background) and once for the menu's "New background".
+        self.assertEqual(asked.call_count, 2)
+        self.assertFalse(controls.recalibrate.is_set())
