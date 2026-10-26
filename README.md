@@ -46,6 +46,14 @@ If you break a pose before the second is up, the countdown restarts. The termina
 start.bat --blur-background         # Windows
 ```
 
+To run without a window, from the macOS menu bar or the Windows system tray:
+
+```bash
+./start.sh --tray --blur-background
+```
+
+A Dragon Ball icon appears in the menu bar or tray. Its menu has **New background** (same as `SPACE`) and **Quit**. The video only goes to the virtual camera, so install one first. Keep the terminal open the first time: it still tells you when to leave the frame. On Linux, `pystray` needs an AppIndicator or X11 desktop.
+
 The first run creates a `.venv` folder, installs the dependencies, and downloads the MediaPipe models. On macOS, allow your terminal app to use the camera when asked. If you missed the prompt, turn it on in **System Settings → Privacy & Security → Camera**, then restart the terminal.
 
 ### First run: leave the frame
@@ -71,7 +79,7 @@ The preview window is mirrored like a selfie view. The video sent to the call is
 
 ## Controls
 
-These keys only work while the preview window has focus.
+These keys only work while the preview window has focus. With `--tray`, use the icon's menu instead; with `--no-preview`, `Ctrl+C` in the terminal quits.
 
 - `SPACE`: capture a new background.
 - `F`: toggle fullscreen.
@@ -88,6 +96,8 @@ These keys only work while the preview window has focus.
 | `--camera N` | Use another webcam (default `0`). |
 | `--width`, `--height`, `--fps` | Capture size and maximum output FPS. |
 | `--no-mirror` | Don't mirror the preview. |
+| `--tray` | Run from the menu bar / system tray with no preview window. |
+| `--no-preview` | No preview window and no tray: the video only goes to the virtual camera. |
 | `--gesture-debug` | Print gesture recognition details to the terminal. |
 
 ## Development
