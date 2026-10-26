@@ -54,6 +54,16 @@ To run without a window, from the macOS menu bar or the Windows system tray:
 
 A Dragon Ball icon appears in the menu bar or tray. Its menu has **New background** (same as `SPACE`) and **Quit**. The video only goes to the virtual camera, so install one first. Keep the terminal open the first time: it still tells you when to leave the frame. On Linux, `pystray` needs an AppIndicator or X11 desktop.
 
+New menu bar icons land on the left of the status area, so a menu bar manager such as Hidden Bar, Bartender, or Ice may hide it at first: expand the hidden items and `⌘`-drag the ball where you want it. macOS remembers the spot.
+
+On macOS you can also build a double-clickable app:
+
+```bash
+./make-app.sh
+```
+
+It creates `GokuCam.app` in this folder (drag it to `/Applications` if you like). It runs `./start.sh --tray` from this folder, so run `./start.sh` once from the terminal first. The app asks for camera access on its first start, and its output goes to `~/Library/Logs/GokuCam.log`.
+
 The first run creates a `.venv` folder, installs the dependencies, and downloads the MediaPipe models. On macOS, allow your terminal app to use the camera when asked. If you missed the prompt, turn it on in **System Settings → Privacy & Security → Camera**, then restart the terminal.
 
 ### First run: leave the frame

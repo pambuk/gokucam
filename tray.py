@@ -6,21 +6,25 @@ import argparse
 import sys
 from contextlib import ExitStack
 
+import cv2
+
 try:
     from .gokucam import Controls, run_camera
 except ImportError:
     from gokucam import Controls, run_camera
 
 
-def tray_icon_image():
+def tray_icon_image(size: int = 64):
     """A four-star Dragon Ball drawn in code, like every other effect."""
     from PIL import Image, ImageDraw
 
-    image = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)
-    draw.ellipse((4, 4, 60, 60), fill=(255, 150, 0), outline=(140, 60, 0), width=3)
+    unit = size / 64
+    draw.ellipse((4 * unit, 4 * unit, 60 * unit, 60 * unit),
+                 fill=(255, 150, 0), outline=(140, 60, 0), width=max(1, round(3 * unit)))
     for x, y in ((24, 24), (40, 24), (24, 40), (40, 40)):
-        draw.ellipse((x - 5, y - 5, x + 5, y + 5), fill=(210, 30, 30))
+        draw.ellipse(((x - 5) * unit, (y - 5) * unit, (x + 5) * unit, (y + 5) * unit), fill=(210, 30, 30))
     return image
 
 
@@ -33,6 +37,13 @@ def hide_dock_icon() -> None:
     except ImportError:
         return
     NSApplication.sharedApplication().setActivationPolicy_(NSApplicationActivationPolicyAccessory)
+
+
+def authorize_camera(index: int) -> None:
+    """macOS shows the camera permission prompt only from the main thread, and the
+    camera loop runs in a worker, so touch the camera here first (no-op once granted)."""
+    if sys.platform == "darwin":
+        cv2.VideoCapture(index).release()
 
 
 def run_tray(args: argparse.Namespace) -> int:
@@ -62,6 +73,7 @@ def run_tray(args: argparse.Namespace) -> int:
     )
     icon = pystray.Icon("gokucam", tray_icon_image(), "GokuCam", menu)
     hide_dock_icon()
+    authorize_camera(args.camera)
     print("[GokuCam] Running from the tray: its menu captures a new background or quits.")
     icon.run(setup=worker)
     if failure:

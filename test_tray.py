@@ -41,6 +41,7 @@ class TrayTests(unittest.TestCase):
             mocks.enter_context(patch.object(tray, "run_camera", side_effect=camera))
             mocks.enter_context(patch.object(tray, "tray_icon_image", return_value=None))
             mocks.enter_context(patch.object(tray, "hide_dock_icon"))
+            mocks.enter_context(patch.object(tray, "authorize_camera"))
             mocks.enter_context(patch("builtins.print"))
             return tray.run_tray(arguments(no_preview=True, tray=True))
 
