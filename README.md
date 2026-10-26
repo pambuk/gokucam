@@ -54,7 +54,7 @@ To run without a window, from the macOS menu bar or the Windows system tray:
 
 A Dragon Ball icon appears in the menu bar or tray. Its menu has **New background** (same as `SPACE`) and **Quit**. The video only goes to the virtual camera, so install one first. Keep the terminal open the first time: it still tells you when to leave the frame. On Linux, `pystray` needs an AppIndicator or X11 desktop.
 
-New menu bar icons land on the left of the status area, so a menu bar manager such as Hidden Bar, Bartender, or Ice may hide it at first: expand the hidden items and `⌘`-drag the ball where you want it. macOS remembers the spot.
+The ball asks for a spot on the right of the menu bar, so menu bar managers such as Hidden Bar, Bartender, or Ice don't swallow it. `⌘`-drag it anywhere else; macOS remembers the spot.
 
 On macOS you can also build a double-clickable app:
 

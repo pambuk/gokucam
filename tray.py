@@ -39,6 +39,20 @@ def hide_dock_icon() -> None:
     NSApplication.sharedApplication().setActivationPolicy_(NSApplicationActivationPolicyAccessory)
 
 
+def place_in_menu_bar(icon) -> None:
+    """New macOS status items land at the left end of the status area, exactly where
+    menu bar managers (Hidden Bar, Bartender, Ice) hide them. Ask for a spot near the
+    right instead; macOS then remembers wherever the user drags it."""
+    status_item = getattr(icon, "_status_item", None)  # pystray keeps it private, macOS only
+    if status_item is None:
+        return
+    from Foundation import NSUserDefaults
+
+    NSUserDefaults.standardUserDefaults().registerDefaults_(
+        {"NSStatusItem Preferred Position GokuCam": 300.0})
+    status_item.setAutosaveName_("GokuCam")
+
+
 def authorize_camera(index: int) -> None:
     """macOS shows the camera permission prompt only from the main thread, and the
     camera loop runs in a worker, so touch the camera here first (no-op once granted)."""
@@ -72,6 +86,7 @@ def run_tray(args: argparse.Namespace) -> int:
         pystray.MenuItem("Quit", lambda icon, item: controls.stop.set()),
     )
     icon = pystray.Icon("gokucam", tray_icon_image(), "GokuCam", menu)
+    place_in_menu_bar(icon)
     hide_dock_icon()
     authorize_camera(args.camera)
     print("[GokuCam] Running from the tray: its menu captures a new background or quits.")
